@@ -1,6 +1,11 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "ES VAT Invoice - `r params$invoice`"
+output: pdf_document
+fontfamily: libertine
+fontsize: 6pt
+params:
+  invoice: "1"
+  
 ---
 
 ```{r Load Packages NPS, include=FALSE}
@@ -8,7 +13,96 @@ library(tidyverse)
 library(systemfonts)
 library(lubridate)
 library(scales)
+library(epoxy)
+library(glue)
+library(knitr)
+library(kableExtra)
+library(stringi)
 # Set Theme
 theme_set(theme_bw(base_family = "Poppins", base_size=10))
+# Remove Scientific Notation
+options(scipen=999)
 ```
 
+```{r Load Data, include = FALSE, cache = TRUE}
+transactionData <- read_csv('ES_Transactions_DataSheet.csv')
+# REMOVE DUMMY TRANSACTION
+transactionData <- transactionData %>%
+  filter(INVOICE_NUMBER != 0)
+
+## REMOVE NON ASCII CHARACTERS
+
+transactionData$FIRST_NAME <-iconv(transactionData$FIRST_NAME, "latin1", "ASCII", sub="")
+transactionData$LAST_NAME <-iconv(transactionData$LAST_NAME, "latin1", "ASCII", sub="")
+transactionData$SPREE_PRODUCT_NAME <-iconv(transactionData$SPREE_PRODUCT_NAME, "latin1", "ASCII", sub="")
+
+
+
+orderData <- transactionData %>%
+  group_by(OPS_DATE, SPREE_ORDER_ID, INVOICE_NUMBER, CUSTOMER_ID, FIRST_NAME, LAST_NAME, EMAIL, ADDRESS_TITLE, ADDRESS_NAME, ADDRESS_DETAIL, POSTCODE, CITY, FULFILLED_BY, SALES_CHANNEL) %>%
+  summarise(LINE_ITEMS = n(), TOTAL_POST_VAT = round(sum(REVENUE_POST_COUPON_EXC_VAT + POST_COUPON_VAT_AMOUNT),2))
+
+
+## TIDY UP NAMING OF FILES
+
+transactionData <- transactionData %>%
+  mutate(`Cost Inc VAT` = REVENUE_POST_COUPON_EXC_VAT + POST_COUPON_VAT_AMOUNT) %>%
+  mutate(REVENUE_POST_COUPON_EXC_VAT = round(REVENUE_POST_COUPON_EXC_VAT,2), POST_COUPON_VAT_AMOUNT = round(POST_COUPON_VAT_AMOUNT,2),`Cost Inc VAT` = round(`Cost Inc VAT`,2) ) %>%
+  rename(ID = SPREE_PRODUCT_ID, `Product Name` = SPREE_PRODUCT_NAME, `VAT Rate` = VAT_RATE, `Cost Exc VAT` = REVENUE_POST_COUPON_EXC_VAT, `VAT Amount` = POST_COUPON_VAT_AMOUNT) 
+
+
+
+```
+
+```{r Create Invoice Data Table, include = FALSE}
+invoiceData <- transactionData %>%
+  filter(INVOICE_NUMBER == params$invoice)
+
+invoiceOrderData<- orderData %>%
+  filter(INVOICE_NUMBER == params$invoice)
+
+```
+
+
+### DIJA VAT INVOICE
+
+Invoice Number | `r invoiceOrderData$INVOICE_NUMBER`
+
+Order Number | `r invoiceOrderData$SPREE_ORDER_ID`
+
+Transaction Date | `r invoiceOrderData$OPS_DATE`
+
+Customer ID | `r invoiceOrderData$CUSTOMER_ID`
+
+Customer Name | `r invoiceOrderData$FIRST_NAME` `r invoiceOrderData$LAST_NAME`
+
+### TRANSACTION DETAILS
+
+
+
+```{r Transaction Details, echo = FALSE}
+invoiceData %>%
+  select(ID, `Product Name`, `VAT Rate`, `Cost Exc VAT`, `VAT Amount`, `Cost Inc VAT`) %>%
+  kbl(booktabs = TRUE, caption.short = TRUE, position = 'h') %>%
+  kable_styling(latex_options= c("scale_down","hold_position"))
+```
+
+
+Total Amount Due |  `r invoiceOrderData$TOTAL_POST_VAT` 
+
+### VAT BREAKDOWN
+
+
+
+```{r VAT Breakdown, echo = FALSE}
+invoiceData %>%
+  group_by(`VAT Rate`) %>%
+  summarise(`VAT Amount` = sum(`VAT Amount`))  %>%
+  kbl(booktabs = TRUE,  caption.short = TRUE, position = 'h', centering = FALSE) 
+```
+
+***
+
+Dija Address: "GoBrands Spain S.L. (fka Godija Spain S.L.)"	Spain	Calle de Montesa, 31, Local comercial, 28006, Madrid
+
+VAT Number: B02832921
