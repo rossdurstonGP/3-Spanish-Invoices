@@ -1,10 +1,9 @@
 ---
-title: "ES VAT Invoice - `r params$invoice`"
+title: "ES VAT Invoice - `r params$INVOICE_NUMBER`"
 output: pdf_document
 fontfamily: libertine
-fontsize: 6pt
 params:
-  invoice: "1"
+  INVOICE_NUMBER: "1"
   
 ---
 
@@ -43,6 +42,7 @@ orderData <- transactionData %>%
   summarise(LINE_ITEMS = n(), TOTAL_POST_VAT = round(sum(REVENUE_POST_COUPON_EXC_VAT + POST_COUPON_VAT_AMOUNT),2))
 
 
+
 ## TIDY UP NAMING OF FILES
 
 transactionData <- transactionData %>%
@@ -56,10 +56,10 @@ transactionData <- transactionData %>%
 
 ```{r Create Invoice Data Table, include = FALSE}
 invoiceData <- transactionData %>%
-  filter(INVOICE_NUMBER == params$invoice)
+  filter(INVOICE_NUMBER == params$INVOICE_NUMBER)
 
 invoiceOrderData<- orderData %>%
-  filter(INVOICE_NUMBER == params$invoice)
+  filter(INVOICE_NUMBER == params$INVOICE_NUMBER)
 
 ```
 
@@ -78,12 +78,10 @@ Customer Name | `r invoiceOrderData$FIRST_NAME` `r invoiceOrderData$LAST_NAME`
 
 ### TRANSACTION DETAILS
 
-
-
 ```{r Transaction Details, echo = FALSE}
 invoiceData %>%
   select(ID, `Product Name`, `VAT Rate`, `Cost Exc VAT`, `VAT Amount`, `Cost Inc VAT`) %>%
-  kbl(booktabs = TRUE, caption.short = TRUE, position = 'h') %>%
+  kbl() %>%
   kable_styling(latex_options= c("scale_down","hold_position"))
 ```
 
@@ -98,8 +96,10 @@ Total Amount Due |  `r invoiceOrderData$TOTAL_POST_VAT`
 invoiceData %>%
   group_by(`VAT Rate`) %>%
   summarise(`VAT Amount` = sum(`VAT Amount`))  %>%
-  kbl(booktabs = TRUE,  caption.short = TRUE, position = 'h', centering = FALSE) 
+  kbl()
 ```
+
+
 
 ***
 
