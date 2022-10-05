@@ -3,7 +3,7 @@ title: "ES VAT Invoice - `r params$INVOICE_NUMBER`"
 output: pdf_document
 fontfamily: libertine
 params:
-  INVOICE_NUMBER: "1"
+  INVOICE_NUMBER: "100"
   
 ---
 
@@ -23,22 +23,31 @@ theme_set(theme_bw(base_family = "Poppins", base_size=10))
 options(scipen=999)
 ```
 
-```{r Load Data, include = FALSE, cache = TRUE}
-transactionData <- read_csv('ES_Transactions_DataSheet.csv')
+
+
+```{r Load Data, include = FALSE}
+
+transactionData <- read_csv('data_upload_batch_1.csv')
 # REMOVE DUMMY TRANSACTION
 transactionData <- transactionData %>%
-  filter(INVOICE_NUMBER != 0)
+  #  filter(INVOICE_NUMBER !=0)
+  filter(INVOICE_NUMBER == params$INVOICE_NUMBER)
 
-## REMOVE NON ASCII CHARACTERS
+## REMOVE NON ASCII CHARACTERS 
 
 transactionData$FIRST_NAME <-iconv(transactionData$FIRST_NAME, "latin1", "ASCII", sub="")
 transactionData$LAST_NAME <-iconv(transactionData$LAST_NAME, "latin1", "ASCII", sub="")
 transactionData$SPREE_PRODUCT_NAME <-iconv(transactionData$SPREE_PRODUCT_NAME, "latin1", "ASCII", sub="")
+transactionData$ADDRESS_TITLE <-iconv(transactionData$ADDRESS_TITLE, "latin1", "ASCII", sub="")
+transactionData$ADDRESS_NAME <-iconv(transactionData$ADDRESS_NAME, "latin1", "ASCII", sub="")
+transactionData$ADDRESS_DETAIL <-iconv(transactionData$ADDRESS_DETAIL, "latin1", "ASCII", sub="")
+transactionData$POSTCODE <-iconv(transactionData$POSTCODE, "latin1", "ASCII", sub="")
+transactionData$CITY <-iconv(transactionData$CITY, "latin1", "ASCII", sub="")
 
 
 
 orderData <- transactionData %>%
-  group_by(OPS_DATE, SPREE_ORDER_ID, INVOICE_NUMBER, CUSTOMER_ID, FIRST_NAME, LAST_NAME, EMAIL, ADDRESS_TITLE, ADDRESS_NAME, ADDRESS_DETAIL, POSTCODE, CITY, FULFILLED_BY, SALES_CHANNEL) %>%
+  group_by(OPS_DATE, SPREE_ORDER_ID, INVOICE_NUMBER, CUSTOMER_ID, FIRST_NAME, LAST_NAME, ADDRESS_TITLE, ADDRESS_NAME, ADDRESS_DETAIL, POSTCODE, CITY) %>%
   summarise(LINE_ITEMS = n(), TOTAL_POST_VAT = round(sum(REVENUE_POST_COUPON_EXC_VAT + POST_COUPON_VAT_AMOUNT),2))
 
 
@@ -56,10 +65,12 @@ transactionData <- transactionData %>%
 
 ```{r Create Invoice Data Table, include = FALSE}
 invoiceData <- transactionData %>%
-  filter(INVOICE_NUMBER == params$INVOICE_NUMBER)
+ # filter(INVOICE_NUMBER == params$INVOICE_NUMBER) %>%
+  replace(is.na(.), "") 
 
 invoiceOrderData<- orderData %>%
-  filter(INVOICE_NUMBER == params$INVOICE_NUMBER)
+ # filter(INVOICE_NUMBER == params$INVOICE_NUMBER) %>%
+  replace(is.na(.), "") 
 
 ```
 
@@ -75,6 +86,8 @@ Transaction Date | `r invoiceOrderData$OPS_DATE`
 Customer ID | `r invoiceOrderData$CUSTOMER_ID`
 
 Customer Name | `r invoiceOrderData$FIRST_NAME` `r invoiceOrderData$LAST_NAME`
+
+Customer Address |  `r invoiceOrderData$ADDRESS_TITLE`  `r invoiceOrderData$ADDRESS_NAME`  `r invoiceOrderData$ADDRESS_DETAIL`  `r invoiceOrderData$POSTCODE`  `r invoiceOrderData$CITY`
 
 ### TRANSACTION DETAILS
 
