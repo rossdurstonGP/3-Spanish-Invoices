@@ -1,0 +1,14 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r Load Packages NPS, include=FALSE}
+library(tidyverse)
+library(systemfonts)
+library(lubridate)
+library(scales)
+# Set Theme
+theme_set(theme_bw(base_family = "Poppins", base_size=10))
+```
+
